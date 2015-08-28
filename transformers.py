@@ -24,6 +24,12 @@ class IdentityTformer(FitlessMixin):
     def transform(self, X, y=None, **fit_params):
         return X
 
+class GeneralTformer(FitlessMixin):
+    def __init__(self, fun):
+        self.fun = fun
+        
+    def transform(self, X, y=None, **fit_params):
+        return self.fun(X)
 
 class DenseTformer(FitlessMixin):
     def transform(self, X, y=None, **fit_params):
@@ -121,20 +127,26 @@ class NzmeanTformer(FitlessMixin):
         return ret
 
 
-pipe = make_pipeline(
-    TfidfTransformer(norm=u'l2',
-                     use_idf=True,
-                     smooth_idf=True,
-                     sublinear_tf=True),
-    DenseTformer(),
-    make_union(
-        IdentityTformer(),
-        # FactorAnalysis(n_components=74),
-        # PCA(n_components=20, whiten=True),
-        NzTformer(),
-        NzvarTformer(),
-        NzmeanTformer(),
-    ),
-    StandardScaler(),
-    # MinMaxScaler(),
-)
+from sklearn.preprocessing import LabelEncoder
+class LabelEncoderX(BaseEstimator, TransformerMixin):
+    """ This is a duplicate of scikit-learn's `LabelEncoder` that can be
+    used inside of `pipeline` since it takes in `x` and `y`
+    """
+    def __init__(self):
+        self.le = LabelEncoder()
+        self.classes_ = None
+
+    def fit(self, x, y=None, **fit_params):
+        self.le.fit(x)
+        self.classes_ = self.le.classes_
+        return self
+
+    def fit_transform(self, x, y=None, **fit_params):
+        self.fit(x)
+        return self.transform(x)
+
+    def transform(self, x):
+        return self.le.transform(x)
+
+    def inverse_transform(self, x):
+        return self.le.inverse_transform(x)
